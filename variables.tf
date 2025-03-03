@@ -22,16 +22,9 @@ variable "parent_cidr_block" {
   default     = "10.93.0.0/18"
 }
 
-
-variable "ami_id" {
-  description = "AMI ID for EC2 instances"
-  type        = string
-  default     = "ami-00be730ec611f3f53"
-}
-
 variable "aws_region" {
-  description = "AWS region to deploy resources"
   type        = string
   default     = "cn-northwest-1"
+  description = "AWS region to deploy resources (e.g. cn-north-1, cn-northwest-1)"
 }
-
+  

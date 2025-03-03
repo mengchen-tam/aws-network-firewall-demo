@@ -71,7 +71,7 @@ resource "aws_route_table_association" "spoke_vpc_tgw_subnets_rt_assoc" {
 
 resource "aws_instance" "spoke_vm" {
   count                  = 2
-  ami                    = var.ami_id
+  ami                    = data.aws_ami.amazon_linux_2023.id
   instance_type          = "t3.micro"
   vpc_security_group_ids = ["${aws_security_group.spoke.id}"]
   subnet_id              = aws_subnet.app_subnet[count.index].id
