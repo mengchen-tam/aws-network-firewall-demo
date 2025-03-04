@@ -55,7 +55,7 @@ After deployment, you can verify the setup using AWS Systems Manager Session Man
 
 ## Notes
 
-- The default region for this demo is Ningxia (cn-northwest-1). If you need to use a different region, update the `ami_id` in the `variables.tf` file with an appropriate AMI for your chosen region.
+- The default region for this demo is Ningxia (cn-northwest-1). If you need to use a Beijing region, update  `variables.tf` 'aws_region' to cn-north-1.
 - The Network Firewall is configured to allow ICMP traffic but block access to www.baidu.com as an example rule.
 - All inter-VPC traffic is routed through the Transit Gateway and inspected by the Network Firewall in the Inspection VPC.
 
