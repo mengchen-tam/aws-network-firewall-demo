@@ -33,36 +33,47 @@ resource "aws_subnet" "app_tgw_subnet_2" {
   }
 }
 
-# #### Spoke VPC 2 Subnet Routes ####
+# #### Spoke VPC 2 Subnet Routes - Simplified for TGW-attached firewall ####
 
-resource "aws_route_table" "spoke_vpc_2_subnets_rt" {
+# Route table for private subnets - direct routing to TGW for all traffic
+resource "aws_route_table" "spoke_vpc_2_private_rt" {
   vpc_id = aws_vpc.spoke_vpc_2.id
+
   route {
     cidr_block         = "0.0.0.0/0"
     transit_gateway_id = aws_ec2_transit_gateway.tgw.id
   }
+
   tags = {
-    "Name" = "spoke_vpc_2_subnet_rtb"
+    "Name" = "spoke_vpc_2_private_rtb"
   }
 }
 
-resource "aws_route_table_association" "spoke_vpc_2_subnets_rt_assoc" {
+# Associate private subnets with simplified route table
+resource "aws_route_table_association" "spoke_vpc_2_private_rt_assoc" {
   count          = 2
   subnet_id      = aws_subnet.app_subnet_2[count.index].id
-  route_table_id = aws_route_table.spoke_vpc_2_subnets_rt.id
+  route_table_id = aws_route_table.spoke_vpc_2_private_rt.id
 }
 
-resource "aws_route_table" "spoke_vpc_2_tgw_subnets_rt" {
+# Route table for TGW attachment subnets - simplified routing
+resource "aws_route_table" "spoke_vpc_2_tgw_rt" {
   vpc_id = aws_vpc.spoke_vpc_2.id
+
+  # Local traffic stays within VPC, all other traffic goes to TGW
+  # TGW attachment subnets typically don't need explicit routes
+  # as they handle TGW attachment traffic automatically
+
   tags = {
-    "Name" = "spoke_vpc_2_tgw_subnet_rtb"
+    "Name" = "spoke_vpc_2_tgw_rtb"
   }
 }
 
-resource "aws_route_table_association" "spoke_vpc_2_tgw_subnets_rt_assoc" {
+# Associate TGW attachment subnets with their route table
+resource "aws_route_table_association" "spoke_vpc_2_tgw_rt_assoc" {
   count          = 2
   subnet_id      = aws_subnet.app_tgw_subnet_2[count.index].id
-  route_table_id = aws_route_table.spoke_vpc_2_tgw_subnets_rt.id
+  route_table_id = aws_route_table.spoke_vpc_2_tgw_rt.id
 }
 
 # #### Spoke VPC 2 Security Groups ###
@@ -90,10 +101,10 @@ resource "aws_instance" "spoke_vm_2" {
 ## SSM Endpoints for EC2 Connectivity ###
 
 resource "aws_vpc_endpoint" "spoke_vpc_2_ssm_ep" {
-  count             = 2
+  count             = 3
   subnet_ids        = [for subnet in aws_subnet.app_subnet_2 : subnet.id]
   vpc_endpoint_type = "Interface"
-  service_name      = [
+  service_name = [
     "com.amazonaws.${var.aws_region}.ssm",
     "com.amazonaws.${var.aws_region}.ssmmessages",
     "com.amazonaws.${var.aws_region}.ec2messages"
@@ -106,6 +117,6 @@ resource "aws_vpc_endpoint" "spoke_vpc_2_ssm_ep" {
   }
   vpc_id = aws_vpc.spoke_vpc_2.id
   tags = {
-    "Name" = "spoke_vpc_2_ssm_endpoint_${data.aws_availability_zones.available.names[count.index]}"
+    "Name" = "spoke_vpc_2_ssm_endpoint_${count.index}"
   }
 }

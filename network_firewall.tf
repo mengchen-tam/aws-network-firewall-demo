@@ -52,7 +52,7 @@ resource "aws_networkfirewall_rule_group" "block_url" {
         }
       }
     }
-    
+
     rules_source {
       rules_source_list {
         generated_rules_type = "DENYLIST"
@@ -60,7 +60,7 @@ resource "aws_networkfirewall_rule_group" "block_url" {
         targets              = ["www.baidu.com"]
       }
     }
-    
+
     stateful_rule_options {
       rule_order = "STRICT_ORDER"
     }
@@ -77,7 +77,7 @@ resource "aws_networkfirewall_firewall_policy" "example_policy" {
     stateful_engine_options {
       rule_order = "STRICT_ORDER"
     }
-    
+
     stateful_default_actions = ["aws:alert_established"]
 
     stateful_rule_group_reference {
@@ -102,21 +102,26 @@ resource "aws_networkfirewall_firewall_policy" "example_policy" {
   }
 }
 
-resource "aws_networkfirewall_firewall" "inspection" {
-  name                = "inspection-firewall"
+# TGW-attached Network Firewall using true TGW attachment mode
+resource "aws_networkfirewall_firewall" "tgw_attached" {
+  name                = "tgw-attached-firewall"
   firewall_policy_arn = aws_networkfirewall_firewall_policy.example_policy.arn
-  vpc_id              = aws_vpc.vpc.id
-  subnet_mapping {
-    subnet_id = aws_subnet.firewall_subnet[0].id
+  transit_gateway_id  = aws_ec2_transit_gateway.tgw.id
+
+  # Use availability zone mapping for true TGW attachment - dynamically get AZ IDs
+  dynamic "availability_zone_mapping" {
+    for_each = slice(data.aws_availability_zones.available.zone_ids, 0, 2)
+    content {
+      availability_zone_id = availability_zone_mapping.value
+    }
   }
-  subnet_mapping {
-    subnet_id = aws_subnet.firewall_subnet[1].id
-  }
+
   tags = {
-    Name = "inspection-firewall"
+    Name = "tgw-attached-firewall"
   }
+
   depends_on = [
-    aws_subnet.firewall_subnet,
+    aws_ec2_transit_gateway.tgw,
     aws_networkfirewall_firewall_policy.example_policy
   ]
 }

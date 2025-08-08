@@ -4,7 +4,7 @@ resource "aws_security_group" "spoke" {
   name        = "spoke_sg"
   description = "Spoke VPC - Security Group"
   vpc_id      = aws_vpc.spoke_vpc.id
-  
+
   ingress {
     cidr_blocks = [var.parent_cidr_block]
     from_port   = -1
@@ -19,7 +19,7 @@ resource "aws_security_group" "spoke" {
     to_port     = 0
     protocol    = "-1"
   }
-  
+
   tags = {
     "Name" = "spoke_sg"
   }

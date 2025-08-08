@@ -1,6 +1,6 @@
-variable "inspection_vpc_cidr_block" {
+variable "egress_vpc_cidr_block" {
   type        = string
-  description = "CIDR block for the inspection VPC"
+  description = "CIDR block for the egress VPC that provides internet connectivity via NAT gateways"
   default     = "10.93.255.0/24"
 }
 
@@ -27,4 +27,4 @@ variable "aws_region" {
   default     = "cn-northwest-1"
   description = "AWS region to deploy resources (e.g. cn-north-1, cn-northwest-1)"
 }
-  
+

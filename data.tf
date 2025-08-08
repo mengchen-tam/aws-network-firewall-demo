@@ -1,7 +1,9 @@
 data "aws_caller_identity" "current" {}
+
 data "aws_availability_zones" "available" {
   state = "available"
 }
+
 data "aws_iam_policy_document" "ssm_ec2" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -12,7 +14,3 @@ data "aws_iam_policy_document" "ssm_ec2" {
     }
   }
 }
-
-# data "http" "ip" {
-#   url = "https://ifconfig.me/ip"
-# }

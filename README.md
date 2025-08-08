@@ -53,6 +53,59 @@ After deployment, you can verify the setup using AWS Systems Manager Session Man
    - Ping test: `ping www.baidu.com` (should work due to the ICMP allow rule)
    - Curl test: `curl www.baidu.com` (should be blocked by the firewall rule)
 
+## Firewall Policy Testing
+
+This demo includes comprehensive testing scripts to verify that Network Firewall security policies are working correctly:
+
+### Automated Testing Scripts
+
+1. **Configuration Validation** (`validate_firewall_config.sh`):
+   ```bash
+   ./validate_firewall_config.sh
+   ```
+   - Validates Terraform configuration for firewall policies
+   - Checks rule group configurations
+   - Verifies AWS managed rule group references
+   - Ensures CIDR block consistency
+
+2. **Runtime Policy Testing** (`test_firewall_policies.sh`):
+   ```bash
+   ./test_firewall_policies.sh
+   ```
+   - Tests ICMP allow rule functionality
+   - Verifies URL blocking for www.baidu.com
+   - Checks firewall status and configuration
+   - Validates inter-VPC connectivity
+
+### Security Policies Implemented
+
+- **ICMP Allow Rule**: Permits ICMP traffic for connectivity testing
+- **URL Blocking Rule**: Blocks HTTP/HTTPS access to www.baidu.com
+- **AWS Managed Rules**: 
+  - MalwareDomainsStrictOrder (Priority 50)
+  - ThreatSignaturesBotnetStrictOrder (Priority 75)
+
+### Manual Testing Commands
+
+From EC2 instances, you can manually test:
+
+```bash
+# Test inter-VPC connectivity (should work)
+ping 10.93.2.10  # From spoke VPC 1 to spoke VPC 2
+
+# Test internet ICMP (should work)
+ping 8.8.8.8
+
+# Test blocked URL (should fail)
+curl http://www.baidu.com
+curl https://www.baidu.com
+
+# Test allowed URL (should work)
+curl http://www.qq.com
+```
+
+For detailed testing documentation, see [FIREWALL_POLICY_VERIFICATION.md](./FIREWALL_POLICY_VERIFICATION.md).
+
 ## Notes
 
 - The default region for this demo is Ningxia (cn-northwest-1). If you need to use a Beijing region, update  `variables.tf` 'aws_region' to cn-north-1.

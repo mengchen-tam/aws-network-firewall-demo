@@ -1,6 +1,6 @@
 resource "aws_iam_role" "ssm_role" {
-  name                = "ssm_role"
-  assume_role_policy  = data.aws_iam_policy_document.ssm_ec2.json
+  name               = "ssm_role"
+  assume_role_policy = data.aws_iam_policy_document.ssm_ec2.json
 }
 
 resource "aws_iam_role_policy_attachment" "ssm_role_ec2" {
