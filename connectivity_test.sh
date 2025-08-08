@@ -188,11 +188,46 @@ test_internet_connectivity() {
     done
     
     if [ "$status" = "Success" ]; then
-        print_status "PASS" "Internet ICMP connectivity working from $vpc_name"
+        print_status "PASS" "Internet ICMP connectivity working from $vpc_name (cn.bing.com)"
     elif [ "$status" = "InProgress" ]; then
         print_status "FAIL" "Internet ICMP connectivity test timed out from $vpc_name"
     else
         print_status "FAIL" "Internet ICMP connectivity failed from $vpc_name (Status: $status)"
+    fi
+    
+    # Test ICMP to blocked domain (should work - ICMP rule allows all ICMP traffic)
+    command_id=$(aws ssm send-command \
+        --instance-ids "$instance_id" \
+        --document-name "AWS-RunShellScript" \
+        --parameters 'commands=["ping -c 3 www.baidu.com"]' \
+        --query 'Command.CommandId' \
+        --output text 2>/dev/null)
+    
+    if [ -n "$command_id" ] && [ "$command_id" != "None" ]; then
+        # Wait for command to complete with timeout
+        max_wait=20
+        wait_time=0
+        status="InProgress"
+        
+        while [ "$status" = "InProgress" ] && [ $wait_time -lt $max_wait ]; do
+            sleep 5
+            ((wait_time+=5))
+            status=$(aws ssm get-command-invocation \
+                --command-id "$command_id" \
+                --instance-id "$instance_id" \
+                --query 'Status' \
+                --output text 2>/dev/null || echo "Failed")
+        done
+        
+        if [ "$status" = "Success" ]; then
+            print_status "PASS" "ICMP to blocked domain working from $vpc_name (www.baidu.com) - ICMP rule allows all ICMP"
+        elif [ "$status" = "InProgress" ]; then
+            print_status "FAIL" "ICMP test to blocked domain timed out from $vpc_name"
+        else
+            print_status "FAIL" "ICMP test to blocked domain failed from $vpc_name (Status: $status)"
+        fi
+    else
+        print_status "FAIL" "Failed to send ICMP test command to blocked domain from $instance_id"
     fi
     
     # Test HTTP to allowed domain (should work)

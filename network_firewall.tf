@@ -9,7 +9,7 @@ resource "aws_networkfirewall_rule_group" "allow_icmp" {
       ip_sets {
         key = "HOME_NET"
         ip_set {
-          definition = ["10.93.0.0/18"]
+          definition = [var.parent_cidr_block]
         }
       }
     }
@@ -48,7 +48,7 @@ resource "aws_networkfirewall_rule_group" "block_url" {
       ip_sets {
         key = "HOME_NET"
         ip_set {
-          definition = ["10.93.0.0/18"]
+          definition = [var.parent_cidr_block]
         }
       }
     }

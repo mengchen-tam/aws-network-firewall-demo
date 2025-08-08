@@ -1,10 +1,10 @@
-# Step 1: Create TGW with custom default route tables for TGW-attached firewall architecture
+# Step 1: Create TGW with default route tables disabled for manual control
 resource "aws_ec2_transit_gateway" "tgw" {
   description                     = "Transit Gateway with TGW-attached Network Firewall"
   amazon_side_asn                 = "64526"
   auto_accept_shared_attachments  = "enable"
-  default_route_table_association = "enable"  # Enable to use spoke RT as default
-  default_route_table_propagation = "enable"  # Enable to use firewall RT as default
+  default_route_table_association = "disable"  # Disable for manual control
+  default_route_table_propagation = "disable"  # Disable for manual control
   dns_support                     = "enable"
   vpn_ecmp_support                = "enable"
   tags = {
@@ -12,7 +12,7 @@ resource "aws_ec2_transit_gateway" "tgw" {
   }
 }
 
-# Step 2: Create spoke and egress route tables for TGW-attached firewall architecture
+# Step 2: Create spoke, egress and firewall route tables for TGW-attached firewall architecture
 resource "aws_ec2_transit_gateway_route_table" "spoke" {
   transit_gateway_id = aws_ec2_transit_gateway.tgw.id
   tags = {
@@ -27,7 +27,6 @@ resource "aws_ec2_transit_gateway_route_table" "egress" {
   }
 }
 
-# Step 3: Create firewall route table for TGW-attached Network Firewall
 resource "aws_ec2_transit_gateway_route_table" "firewall" {
   transit_gateway_id = aws_ec2_transit_gateway.tgw.id
   tags = {
@@ -35,23 +34,14 @@ resource "aws_ec2_transit_gateway_route_table" "firewall" {
   }
 }
 
-# Set spoke route table as default association route table
-resource "aws_ec2_transit_gateway_default_route_table_association" "default_association" {
-  transit_gateway_id             = aws_ec2_transit_gateway.tgw.id
-  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.spoke.id
-}
-
-# Set firewall route table as default propagation route table
-resource "aws_ec2_transit_gateway_default_route_table_propagation" "default_propagation" {
-  transit_gateway_id             = aws_ec2_transit_gateway.tgw.id
-  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.firewall.id
-}
+# Step 3: Manual route table associations for predictable behavior
 
 # Step 4: Create egress VPC attachment and associate with egress route table
 resource "aws_ec2_transit_gateway_vpc_attachment" "egress" {
-  subnet_ids         = [for subnet in aws_subnet.tgw_attach_subnet : subnet.id]
-  transit_gateway_id = aws_ec2_transit_gateway.tgw.id
-  vpc_id             = aws_vpc.vpc.id
+  subnet_ids                                      = [for subnet in aws_subnet.tgw_attach_subnet : subnet.id]
+  transit_gateway_id                              = aws_ec2_transit_gateway.tgw.id
+  vpc_id                                          = aws_vpc.vpc.id
+  transit_gateway_default_route_table_association = false  # Override default association for egress VPC
   tags = {
     "Name" = "egress_attach"
   }
@@ -86,20 +76,44 @@ resource "aws_ec2_tag" "firewall_attachment_name" {
   depends_on = [data.aws_ec2_transit_gateway_attachments.firewall]
 }
 
-# Note: Spoke VPCs automatically associate with default association route table (spoke RT)
-# No explicit associations needed for spoke VPCs
+# Manual route table associations for predictable behavior
+resource "aws_ec2_transit_gateway_route_table_association" "spoke_assoc" {
+  transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.spoke.id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.spoke.id
+}
 
-# Egress VPC uses its own route table
+resource "aws_ec2_transit_gateway_route_table_association" "spoke2_assoc" {
+  transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.spoke2.id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.spoke.id
+}
+
 resource "aws_ec2_transit_gateway_route_table_association" "egress_assoc" {
   transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.egress.id
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.egress.id
 }
 
-# Note: Firewall attachment also uses default association (spoke RT) for routing decisions
-# No explicit association needed for firewall attachment
+resource "aws_ec2_transit_gateway_route_table_association" "firewall_assoc" {
+  transit_gateway_attachment_id  = data.aws_ec2_transit_gateway_attachments.firewall.ids[0]
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.firewall.id
+  
+  depends_on = [aws_networkfirewall_firewall.tgw_attached, data.aws_ec2_transit_gateway_attachments.firewall]
+}
 
-# Note: All VPC attachments automatically propagate routes to default propagation route table (firewall RT)
-# This includes spoke VPCs and egress VPC routes
+# Manual route table propagations for predictable behavior
+resource "aws_ec2_transit_gateway_route_table_propagation" "spoke_to_firewall" {
+  transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.spoke.id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.firewall.id
+}
+
+resource "aws_ec2_transit_gateway_route_table_propagation" "spoke2_to_firewall" {
+  transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.spoke2.id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.firewall.id
+}
+
+resource "aws_ec2_transit_gateway_route_table_propagation" "egress_to_firewall" {
+  transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.egress.id
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.firewall.id
+}
 
 # Step 5: Create spoke VPC attachments for TGW-attached firewall architecture
 resource "aws_ec2_transit_gateway_vpc_attachment" "spoke" {
@@ -129,16 +143,12 @@ resource "aws_ec2_transit_gateway_route" "spoke_default_to_firewall" {
   
   depends_on = [aws_networkfirewall_firewall.tgw_attached, data.aws_ec2_transit_gateway_attachments.firewall]
 }
-
 # Firewall routes internet traffic to egress VPC
 resource "aws_ec2_transit_gateway_route" "firewall_to_egress" {
   destination_cidr_block         = "0.0.0.0/0"
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.firewall.id
   transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.egress.id
 }
-
-# Note: Spoke VPC routes are automatically propagated to firewall route table
-# through default propagation settings, no static routes needed
 
 # Egress VPC also routes through firewall for return traffic inspection
 resource "aws_ec2_transit_gateway_route" "egress_to_firewall" {
