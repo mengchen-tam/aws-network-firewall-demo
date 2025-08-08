@@ -2,6 +2,10 @@
 
 This demo environment showcases a centralized network inspection architecture using AWS Network Firewall, Transit Gateway, and multiple VPCs.
 
+**2025/08/08 Update: This main branch demostrates the traditional VPC endpoint network firewall deplyoment.**
+
+**To check the new feature TGW-attached Network Firewall deployment, switch the branch to 'tgw-attached'**
+
 ## Architecture Overview
 
 ![Architecture](./image/architecture.png)
