@@ -4,7 +4,7 @@ This demo environment showcases a **TGW-attached Network Firewall** architecture
 
 ## Architecture Overview
 
-![Architecture](./image/architecture.png)
+![Architecture](./image/tgw-architecture.png)
 
 The demo environment implements a **TGW-attached Network Firewall** architecture consisting of:
 - 2 Spoke VPCs with EC2 instances
