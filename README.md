@@ -52,8 +52,9 @@ The demo environment implements a **TGW-attached Network Firewall** architecture
 
 1. **Clone and Initialize**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/mengchen-tam/aws-network-firewall-demo/
    cd aws-network-firewall-demo
+   git checkout tgw-attached
    terraform init
    ```
 
